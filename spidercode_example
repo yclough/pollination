@@ -1,0 +1,71 @@
+#################################################
+# Run OSR Biocontrol, Pollination, yield models #
+#################################################
+
+# required packages: R.matlab, fields, Rcpp
+
+# Define paths that will be used to access input files #
+
+	code_path <-"C:/a1workmain/ES_synthesis/BC_OSR/code/OSR_20150409"
+	map_path <- paste(code_path, "/maps",sep="")
+	poll.param_path <- paste(code_path, "/poll.input",sep="")
+	bc.param_path <- paste(code_path, "/bc.input",sep="")
+	output_path <- paste(code_path, "/output",sep="")
+
+# import functions
+
+	setwd(code_path)
+	source('funct.plot.R')
+	source('funct.mapimport.R')
+	source('funct.mapimport_20150409_multi.R')
+	source('runbc_20150409.R')
+	source('runbc.R')
+	source('runpoll_apisoptional_unstandinit_20150416.R')
+	source('runpoll_apisoptional.R')
+	source('runpoll_apisoptional_unstandinit.R')
+	source('Yfunc.R')
+  library(Rcpp)
+  require('Rcpp')
+  dyn.load('latdisp_r3_64.dll')
+  lat_fordisp <- function(N=N[,1,1],window=300,beta=1,surv.per.m=1,
+					L.gis=L.gis_poll,alpha=floral[,,1,2],cell.size=25,
+					growth=NA){ .Call("lat_fordisp", N, window, beta, surv.per.m, L.gis, alpha, cell.size, growth)}
+
+# select a set of (rectangular) sample landscapes - leftbottom and upperright coordinates stored in "sample.coord"
+
+	setwd(map_path)
+	VNsites<-read.table("Kopie von coordinates for 15 OSR fields sampled in 2013.txt",h=T)
+
+	selcoord<-function(fields,rad,X,Y){
+	Xrect<-c(range(X[fields])+c(-rad,rad))
+	Yrect<-c(range(Y[fields])+c(-rad,rad))
+	return(c(Xrect[1],Yrect[1],Xrect[2],Yrect[2]))}
+	plot(VNsites[,3],VNsites[,2],type="n")			# plotting the sites
+	#VNsites$lands.samp<-c(1,2,2,3,4,4,4,4,5,6,7,7,8,8,9) 	# manual grouping
+	VNsites$lands.samp<-1:15 	# manual grouping
+	sample.coord<-matrix(NA,nrow=max(VNsites$lands.samp),ncol=4)
+	for(i in 1:max(VNsites$lands.samp)){
+		sample.coord[i,]<-selcoord(fields=which(VNsites$lands.samp==i),rad=5000,X=VNsites[,3],Y=VNsites[,2])
+	}
+	plot(VNsites[,3],VNsites[,2],type="n")
+	text(VNsites[,3],VNsites[,2],labels=VNsites[,1])
+	rectv<-function(x)rect(x[1],x[2],x[3],x[4])
+	apply(sample.coord,1,rectv)
+
+# Capture all 15 landscapes from block-SMD data
+
+	map_2009<-getmap2(map_path=map_path,rastercodefile="rastercode_20150114.txt",
+		origin_region=list(E=1302000,N=6410000),origin_sample=list(E= sample.coord[,1],N=sample.coord[,2]),
+		size_landsc_m=10000,
+		cell.size=25, year = 2009,prefix="cSMD_Ska",suffix="",filetype="mat",num_crop=75)
+
+	map_2010<-getmap2(map_path=map_path,rastercodefile="rastercode_20150114.txt",
+		origin_region=list(E=1302000,N=6410000),origin_sample=list(E= sample.coord[,1],N=sample.coord[,2]),
+		size_landsc_m=10000,
+		cell.size=25, year = 2010,prefix="cSMD_Ska",suffix="",filetype="mat",num_crop=75)
+
+	runpoll_test<-runpoll_apisoptional_unstandinit_20150424(firstyear=as.logical(TRUE),honeybees=FALSE,
+		L.gismat.curr=map_2010[[2]][[1]],cell.size=25,map_path=map_path,
+		poll.param_path=poll.param_path,rastercodefile="rastercode_20150416.txt",key="number")
+
+	runbc_test<-runbc_20150409(firstyear=as.logical(TRUE),N_next="",L.gismat.curr=map_2010[[2]][[1]],L.gismat.prev=map_2009[[2]][[1]],cell.size=25,map_path=map_path,bc.param_path=bc.param_path,rastercodefile="rastercode_20150114.txt",key="OSR_biocontrol_LU")
