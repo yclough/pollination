@@ -98,7 +98,7 @@ q=runif(sum(!is.na(data[,col.id[1]]))*length(col.id)/3)){
 # replace the missing FlorCov, Flor & Nest values for all lines referring to (if NA in samma.som,  FlorCov is set to NA)
 require(mc2d)
 	out <- data
-	for(i in 1:2){                           #YC! change 2 to "number of columns that are 3"
+	for(i in 1:(length(col.id)/3)){                           #YC! change 2 to "number of columns that are 3"
 	# generate sample 
 	b <- data[,col.id[3*(i-1)+1]] [ data[,samma.id][ which(is.na(out[,col.id[3*(i-1)+1]])) ] ]
 	l <- data[,col.id[3*(i-1)+2]] [ data[,samma.id][ which(is.na(out[,col.id[3*(i-1)+1]])) ] ]
